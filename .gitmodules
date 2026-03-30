@@ -1,0 +1,6 @@
+[submodule "postgres"]
+	path = postgres
+	url = https://github.com/yedlurisrinu/postgres.git
+[submodule "pypi-server"]
+	path = pypi-server
+	url = https://github.com/yedlurisrinu/pypi-server.git
