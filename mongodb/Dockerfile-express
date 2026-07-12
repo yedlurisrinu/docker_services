@@ -1,0 +1,9 @@
+FROM mongo-express:latest
+
+USER root
+
+# Alpine package manager — same as Redis
+RUN apk add --no-cache bash curl perl perl-json
+
+COPY start-mongo-express.sh /start-mongo-express.sh
+RUN chmod +x /start-mongo-express.sh

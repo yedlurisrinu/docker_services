@@ -1,0 +1,79 @@
+services:
+  elasticsearch:
+    image: elasticsearch:9.2.3   # match your local version — see Step 4
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - VAULT_ADDR=http://vault-server:8200
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+      - discovery.type=single-node
+#      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.enabled=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - path.repo=/usr/share/elasticsearch/snapshots
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ./start-elasticsearch.sh:/start-elasticsearch.sh
+    command: ["bash", "/start-elasticsearch.sh"]
+    networks:
+      - vault-network
+      - services_network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'" ]
+      interval: 60s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  es-init:
+    image: curlimages/curl:latest       # lightweight curl-only image
+    container_name: es-init
+    restart: "no"                        # one-shot, never restarts
+    environment:
+      - VAULT_ADDR=http://vault-server:8200
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+    depends_on:
+      elasticsearch:
+        condition: service_healthy       # waits for ES healthcheck to pass
+    networks:
+      - vault-network
+      - services_network
+    command: >-
+      sh -c 'echo "Setting kibana_system password..." && curl -s -o /dev/null -w "%{http_code}" -X POST "http://elasticsearch:9200/_security/user/kibana_system/_password" -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" -d "{\"password\":\"${ELASTIC_PASSWORD}\"}" | grep -q "200" && echo "kibana_system password set successfully" '
+
+  kibana:
+#      image: kibana:9.2.3   # ← must match ES version exactly
+      build:
+        context: .
+        dockerfile: Dockerfile_kibana
+      container_name: kibana
+      restart: unless-stopped
+      environment:
+        - VAULT_ADDR=http://vault-server:8200
+        - VAULT_TOKEN=${VAULT_TOKEN}
+        - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+        - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      ports:
+        - "5601:5601"
+      volumes:
+        - ./start-kibana.sh:/start-kibana.sh
+      command: [ "bash", "/start-kibana.sh" ]
+      depends_on:
+        es-init:
+          condition: service_completed_successfully
+      networks:
+        - vault-network
+        - services_network
+
+volumes:
+  es_data:
+
+networks:
+  vault-network:
+    external: true
+  services_network:
+    external: true

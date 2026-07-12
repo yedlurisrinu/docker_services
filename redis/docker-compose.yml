@@ -1,0 +1,45 @@
+services:
+  redis:
+    build:
+      context: .
+      dockerfile: Dockerfile    # ← use custom image
+    container_name: redis
+    restart: unless-stopped
+    sysctls:
+      - net.core.somaxconn=512        # recommended for Redis
+    environment:
+      - VAULT_ADDR=http://vault-server:8200    # ← vault-server DNS confirmed ✅
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+      - vm.overcommit_memory=1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./start-redis.sh:/start-redis.sh
+    command: [ "bash", "/start-redis.sh" ]
+    networks:
+      - vault-network       # ← join vault-network ✅
+      - services_network
+
+  redisinsight:
+    image: redis/redisinsight:2.60
+    container_name: redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      - redis
+    networks:
+      - services_network
+volumes:
+  redis_data:
+  redisinsight_data:
+
+networks:
+  vault-network:
+    external: true
+  services_network:
+    external: true

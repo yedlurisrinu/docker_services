@@ -1,0 +1,58 @@
+services:
+  mongodb:
+#    image: mongo:8.0
+    build:
+      context: .
+      dockerfile: Dockerfile    # ← use custom image
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 512m
+#          cpus: "0.5"
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - VAULT_ADDR=http://vault-server:8200    # ← vault-server DNS confirmed ✅
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+    volumes:
+      - mongodb_data:/data/db
+      - ./start-mongodb.sh:/start-mongodb.sh
+    command: ["bash", "/start-mongodb.sh"]
+    networks:
+      - vault-network       # ← join vault-network ✅
+      - services_network
+
+  mongo-express:
+    build:
+      context: .
+      dockerfile: Dockerfile-express    # ← use custom image
+#    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    environment:
+      - VAULT_ADDR=http://vault-server:8200    # ← vault-server DNS confirmed ✅
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+      - ME_CONFIG_BASICAUTH=false
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./start-mongo-express.sh:/start-mongo-express.sh
+    depends_on:
+      - mongodb
+    command: ["bash", "/start-mongo-express.sh"]
+    networks:
+      - services_network
+      - vault-network       # ← join vault-network ✅
+
+volumes:
+  mongodb_data:
+
+networks:
+  services_network:
+    external: true
+  vault-network:       # ← join vault-network ✅
+    external: true

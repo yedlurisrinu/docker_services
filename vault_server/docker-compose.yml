@@ -1,0 +1,29 @@
+services:
+  vault-server:
+    image: hashicorp/vault:latest
+    container_name: vault-server
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    environment:
+      - VAULT_ADDR=http://vault-server:8200
+    volumes:
+      - ./config:/vault/config     # vault.hcl config
+      - ./data:/vault/data         # persistent secret storage
+      - ./logs:/vault/logs         # logs
+    command: vault server -config=/vault/config/vault.hcl
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://localhost:8200"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - vault-network
+
+networks:
+  vault-network:
+    external: true

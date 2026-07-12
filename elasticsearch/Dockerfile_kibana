@@ -1,0 +1,6 @@
+FROM kibana:9.2.3
+
+USER root
+COPY start-kibana.sh /start-kibana.sh
+RUN chmod +x /start-kibana.sh
+USER kibana

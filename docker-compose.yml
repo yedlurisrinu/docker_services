@@ -1,0 +1,7 @@
+include:
+  - mongodb/docker-compose.yml
+  - redis/docker-compose.yml
+  - qdrant/docker-compose.yml
+  - elasticsearch/docker-compose.yml
+  - postgres/docker-compose.yml
+  - pypi-server/docker-compose.yml
