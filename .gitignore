@@ -1,1 +1,39 @@
-vault_server/data
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# uv / virtualenv
+.venv/
+venv/
+
+# Environment and secrets — never commit
+.env
+.env.*
+*_credentials*.json
+*-credentials*.json
+service_account*.json
+*.pem
+*.key
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Editors
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+
+# Local runtime data
+logs/
+local_storage/

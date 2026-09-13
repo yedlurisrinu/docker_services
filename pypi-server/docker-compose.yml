@@ -1,0 +1,22 @@
+name: infra
+
+services:
+  pypi-server:
+    image: pypiserver/pypiserver:latest
+    container_name: pypi-server
+    ports:
+      - "8080:8080"
+    command: run -p 8080 -a . -P . --overwrite /data/packages
+    volumes:
+      - pypi_packages:/data/packages
+    networks:
+      - infra-network
+    restart: unless-stopped
+volumes:
+  pypi_packages:
+    name: pypi_packages
+
+networks:
+  infra-network:
+    name: infra-network
+    driver: bridge
