@@ -26,17 +26,15 @@ services:
       start_period: 60s
     networks:
       - vault-network       # ← join vault-network ✅
-      - postgres-network
+      - services_network
 
 volumes:
   postgres-data:
     name: postgres-data
 
 networks:
+  services_network:
+    external: true
   vault-network:
     external: true
     name: vault-network     # ← exact name from diagnostic ✅
-
-  postgres-network:
-    name: postgres-network
-    driver: bridge
