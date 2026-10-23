@@ -1,0 +1,58 @@
+# docker_services/mcp-lab-lb/docker-compose.yml
+# Thread 04-B · Topic 4A · C0 step 4 — two stub MCP replicas behind an nginx load balancer, for T5 C2.
+# Clients use http://localhost:8001/mcp, the same URI registered as news-mcp-server's resource_url in Keycloak:
+# the canonical resource URI is the balancer's address, not a replica's. No secrets, so no start.sh is needed.
+
+x-replica: &replica
+  build: ./stub
+  image: mcp-lab-stub:0.0.1
+  environment: &replica-env
+    MCP_ALLOWED_HOSTS: "localhost:8001"
+  healthcheck:
+    # The slim Python image has no curl; Python's urllib does the probe.
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+    interval: 15s
+    timeout: 5s
+    retries: 3
+    start_period: 10s
+  networks:
+    - services_network
+
+services:
+  mcp-replica-1:
+    <<: *replica
+    container_name: mcp-replica-1
+    environment:
+      <<: *replica-env
+      REPLICA_ID: replica-1
+
+  mcp-replica-2:
+    <<: *replica
+    container_name: mcp-replica-2
+    environment:
+      <<: *replica-env
+      REPLICA_ID: replica-2
+
+  mcp-lb:
+    image: nginx:1.30.6-alpine
+    container_name: mcp-lb
+    depends_on:
+      mcp-replica-1:
+        condition: service_healthy
+      mcp-replica-2:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:8001:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/lb-healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - services_network
+
+networks:
+  services_network:
+    external: true

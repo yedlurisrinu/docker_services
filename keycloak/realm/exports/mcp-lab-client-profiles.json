@@ -1,0 +1,18 @@
+{
+  "profiles" : [ {
+    "name" : "cimd-profile",
+    "description" : "mcp Oauth lab",
+    "executors" : [ {
+      "executor" : "client-id-metadata-document",
+      "configuration" : {
+        "cimd-allow-http-scheme" : false,
+        "cimd-allow-permitted-domains" : [ "cimd-host", "127.0.0.1" ],
+        "cimd-restrict-same-domain" : false,
+        "cimd-required-properties" : [ ],
+        "cimd-resource-indicator-allow-list" : [ "http://localhost:8001/mcp" ],
+        "only-allow-confidential-client" : false,
+        "accept-public-client-with-confidential-client-only-grant" : false
+      }
+    } ]
+  } ]
+}

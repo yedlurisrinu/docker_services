@@ -1,0 +1,84 @@
+# docker_services/keycloak/docker-compose.yml
+# Thread 04-B · Topic 4A · C0 steps 1–3c — Keycloak 26.8.1 as the local OAuth 2.1 / OIDC issuer
+# for Topics 4A, 4B and 5. Development mode only (start-dev): H2 file store, HTTP, no production hardening.
+#
+# Run every compose command through keycloak/start.sh (e.g. `start.sh up -d`, `start.sh down`): it reads the
+# bootstrap admin credentials from Vault and exports them for that one command only. There is no .env file,
+# and nothing is exported in a shell profile. For read-only checks use plain docker (docker ps, docker logs
+# keycloak, docker inspect keycloak), which does not interpolate this file.
+#
+# Requires: the external Docker network `services_network`.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    container_name: keycloak
+    # The image ships bash and Keycloak only (no curl, grep or sed), so the password cannot be fetched from
+    # Vault inside the container. Instead, Compose mounts it as a secret file, and this entrypoint reads it with
+    # a bash builtin, exports it only into this process, then execs Keycloak.
+    # `$$` escapes Compose interpolation, so the container receives `$(< file)`.
+    # The empty-file guard matters: Compose does not fail when the secret's source variable is unset.
+    # cimd and resource-indicators are experimental features: CIMD registration (T4B C2) and
+    # RFC 8707 audience binding (T4A C3, T4B C1).
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >-
+        [ -s /run/secrets/kc_admin_password ] || { echo 'kc_admin_password secret is empty; start via start.sh' >&2; exit 1; };
+        export KC_BOOTSTRAP_ADMIN_PASSWORD="$$(< /run/secrets/kc_admin_password)" &&
+        exec /opt/keycloak/bin/kc.sh start-dev --features=cimd,resource-indicators --import-realm
+    secrets:
+      - kc_admin_password
+    environment:
+      # Username is not a secret, but comes from the same Vault entry via start.sh for one source of truth.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:?run keycloak/start.sh, which reads it from Vault}
+      # Fixed frontend URL, so the issuer does not depend on which network path a caller used.
+      KC_HOSTNAME: http://localhost:8180
+      # Lets containers on services_network reach back-channel endpoints (token, JWKS) at keycloak:8080.
+      # Requires KC_HOSTNAME to be a full URL.
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      # Health endpoints on the management port 9000 (/health/ready, /health/live), not published to the host.
+      KC_HEALTH_ENABLED: "true"
+      # Step 3c: trust the docker_services local CA, so Keycloak's HTTPS fetch of https://cimd-host/... (CIMD)
+      # verifies. Directories are scanned recursively; PEM files are accepted.
+      KC_TRUSTSTORE_PATHS: /opt/keycloak/conf/truststores
+    ports:
+      # Host port 8180, because 8080 is already taken by the local pypiserver.
+      - "127.0.0.1:8180:8080"
+    volumes:
+      # Persists the dev H2 database (realms, clients, users) across restarts; `down -v` resets it.
+      - keycloak_data:/opt/keycloak/data
+      # Step 2: realm files read by --import-realm at startup. Import skips a realm that already exists,
+      # so editing the file later needs a delete of the realm (or `down -v`) to take effect.
+      - ./realm:/opt/keycloak/data/import:ro
+      # Step 3c: the local CA certificate (public) made by cimd-host/make-certs.sh. Mounted from cimd-host/certs
+      # so a CA rotation reaches Keycloak on the next recreate, with no copy to go stale.
+      - ../cimd-host/certs/ca.crt:/opt/keycloak/conf/truststores/docker-services-local-ca.pem:ro
+    healthcheck:
+      # No curl or wget in the image, so the probe uses bash's /dev/tcp against the management port.
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"UP"' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - services_network
+
+secrets:
+  kc_admin_password:
+    # Value taken from the KC_ADMIN_PASSWORD variable in the environment of the `docker compose` process,
+    # which start.sh sets from Vault. Mounted in the container as /run/secrets/kc_admin_password.
+    environment: KC_ADMIN_PASSWORD
+
+volumes:
+  keycloak_data:
+
+networks:
+  services_network:
+    external: true

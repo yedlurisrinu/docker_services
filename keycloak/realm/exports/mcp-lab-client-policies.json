@@ -1,0 +1,17 @@
+{
+  "policies" : [ {
+    "name" : "cimd-policy",
+    "description" : "mcp lab Oauth policy ",
+    "enabled" : true,
+    "mode" : "DEFAULT",
+    "conditions" : [ {
+      "condition" : "client-id-uri",
+      "configuration" : {
+        "is-negative-logic" : false,
+        "client-id-uri-scheme" : [ "https" ],
+        "client-id-uri-allow-permitted-domains" : [ "cimd-host" ]
+      }
+    } ],
+    "profiles" : [ "cimd-profile" ]
+  } ]
+}

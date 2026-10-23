@@ -1,0 +1,8 @@
+{
+  "client_id": "https://cimd-host/clients/news-cli-cimd.json",
+  "client_name": "News CLI (CIMD)",
+  "redirect_uris": ["http://127.0.0.1:8766/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}

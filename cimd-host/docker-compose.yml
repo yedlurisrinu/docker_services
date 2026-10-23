@@ -1,0 +1,40 @@
+# docker_services/cimd-host/docker-compose.yml
+# Thread 04-B · Topic 4A · C0 step 3b — nginx serving OAuth Client ID Metadata Documents (CIMD) over HTTPS,
+# reachable on services_network as https://cimd-host/. Keycloak fetches client metadata from here (T4B C2).
+#
+# Run every compose command through cimd-host/start.sh (e.g. `start.sh up -d`, `start.sh down`): it reads the
+# TLS private key from Vault and hands it to Compose as a secret. No host port is published: only containers
+# on services_network (Keycloak, throwaway test containers) reach it.
+
+services:
+  cimd-host:
+    image: nginx:1.30.6-alpine
+    container_name: cimd-host
+    secrets:
+      - cimd_host_tls_key
+    volumes:
+      # Server config: HTTPS on 443 for /clients/, plain HTTP health endpoint on 127.0.0.1:8081 inside the container.
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Public server certificate from step 3a. The private key never touches this folder.
+      - ./certs/cimd-host.crt:/etc/nginx/tls/cimd-host.crt:ro
+      # The metadata documents themselves.
+      - ./html:/usr/share/nginx/html:ro
+    healthcheck:
+      # busybox wget is in the alpine image; the probe uses the loopback-only HTTP listener.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - services_network
+
+secrets:
+  cimd_host_tls_key:
+    # PEM private key from Vault (CREDENTIALS / MCP_LAB_CIMD_HOST_TLS_KEY), exported by start.sh for one command.
+    # Mounted at /run/secrets/cimd_host_tls_key; nginx reads it at startup.
+    environment: MCP_LAB_CIMD_HOST_TLS_KEY
+
+networks:
+  services_network:
+    external: true
