@@ -6,3 +6,4 @@
   "response_types": ["code"],
   "token_endpoint_auth_method": "none"
 }
+

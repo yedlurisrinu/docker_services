@@ -1,0 +1,40 @@
+# docker_services/news-cimd-host/docker-compose.yml
+# nginx serving OAuth Client ID Metadata Documents (CIMD) over HTTPS,
+# reachable on services_network as https://news-cimd-host/. Keycloak fetches client metadata from here (T4B C2).
+#
+# Run every compose command through news-cimd-host/start.sh (e.g. `start.sh up -d`, `start.sh down`): it reads the
+# TLS private key from Vault and hands it to Compose as a secret. No host port is published: only containers
+# on services_network (Keycloak, throwaway test containers) reach it.
+
+services:
+  news-cimd-host:
+    image: nginx:1.30.6-alpine
+    container_name: news-cimd-host
+    secrets:
+      - news_cimd_host_tls_key
+    volumes:
+      # Server config: HTTPS on 443 for /clients/, plain HTTP health endpoint on 127.0.0.1:8081 inside the container.
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Public server certificate from step 3a. The private key never touches this folder.
+      - ./certs/news-cimd-host.crt:/etc/nginx/tls/news-cimd-host.crt:ro
+      # The metadata documents themselves.
+      - ./html:/usr/share/nginx/html:ro
+    healthcheck:
+      # busybox wget is in the alpine image; the probe uses the loopback-only HTTP listener.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - services_network
+
+secrets:
+  news_cimd_host_tls_key:
+    # PEM private key from Vault (CREDENTIALS / NEWS_MCP_CIMD_HOST_TLS_KEY), exported by start.sh for one command.
+    # Mounted at /run/secrets/news_cimd_host_tls_key; nginx reads it at startup.
+    environment: NEWS_MCP_CIMD_HOST_TLS_KEY
+
+networks:
+  services_network:
+    external: true
