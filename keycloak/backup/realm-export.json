@@ -338,6 +338,7 @@
           "attributes": {}
         }
       ],
+      "news-summary-app-svc": [],
       "security-admin-console": [],
       "admin-cli": [],
       "https://news-cimd-host/clients/news-summary-app-cimd.json": [],
@@ -498,6 +499,24 @@
   "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
   "webAuthnPolicyPasswordlessAcceptableAaguids": [],
   "webAuthnPolicyPasswordlessExtraOrigins": [],
+  "users": [
+    {
+      "id": "452b7db4-f1d2-490c-9ca7-ae78cc887870",
+      "username": "service-account-news-summary-app-svc",
+      "emailVerified": false,
+      "enabled": true,
+      "createdTimestamp": 1793647428303,
+      "totp": false,
+      "serviceAccountClientId": "news-summary-app-svc",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-es-mcp"
+      ],
+      "notBefore": 0,
+      "groups": []
+    }
+  ],
   "scopeMappings": [
     {
       "clientScope": "offline_access",
@@ -738,6 +757,8 @@
       "protocol": "openid-connect",
       "attributes": {
         "logout.confirmation.enabled": "false",
+        "id.token.as.detached.signature": "false",
+        "client.introspection.response.allow.jwt.claim.enabled": "false",
         "standard.token.exchange.enabled": "false",
         "oauth2.jwt.authorization.grant.enabled": "false",
         "frontchannel.logout.session.required": "false",
@@ -746,10 +767,18 @@
         "use.refresh.tokens": "true",
         "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
+        "client.use.lightweight.access.token.enabled": "false",
         "backchannel.logout.session.required": "true",
+        "request.object.required": "not required",
+        "client_credentials.use_refresh_token": "false",
         "consent.screen.text": "The client's hostname is news-cimd-host",
+        "access.token.header.type.rfc9068": "false",
+        "tls.client.certificate.bound.access.tokens": "false",
+        "require.pushed.authorization.requests": "false",
+        "acr.loa.map": "{}",
         "display.on.consent.screen": "true",
-        "cimd.cache.expiry.time.in.sec": "1793597354",
+        "token.response.type.bearer.lower-case": "false",
+        "cimd.cache.expiry.time.in.sec": "1793829181",
         "dpop.bound.access.tokens": "false"
       },
       "authenticationFlowBindingOverrides": {},
@@ -774,6 +803,82 @@
       ],
       "defaultClientScopes": [
         "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "organization",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "id": "25e156b5-ef4c-4ff0-b108-5a0081d764ee",
+      "clientId": "news-summary-app-svc",
+      "name": "news-summary-app-sa",
+      "description": "",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "**********",
+      "redirectUris": [
+        "/*"
+      ],
+      "webOrigins": [
+        "/*"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "client.secret.creation.time": "1793647428",
+        "backchannel.logout.session.required": "true",
+        "standard.token.exchange.enabled": "false",
+        "oauth2.jwt.authorization.grant.enabled": "false",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "dpop.bound.access.tokens": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "id": "6b1645d4-a883-4f8a-899a-b5a1a52ccb0f",
+          "name": "es-mcp-server audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "lightweight.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "included.custom.audience": "http://es-mcp-lb:9599/mcp"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "service_account",
         "acr",
         "roles",
         "profile",

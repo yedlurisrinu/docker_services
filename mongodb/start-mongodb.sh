@@ -7,6 +7,11 @@ echo "  MongoDB Vault Secret Loader      "
 echo "──────────────────────────────────────"
 
 # ── Debug ──────────────────────────────────────────────
+# ── Vault token: Compose secret file, fallback to env ──
+if [ -s /run/secrets/vault_token ]; then
+  VAULT_TOKEN="$(cat /run/secrets/vault_token)"
+fi
+
 echo "ENV CHECK:"
 echo "  VAULT_ADDR         = ${VAULT_ADDR}"
 echo "  VAULT_TOKEN set    = $([ -n "$VAULT_TOKEN" ] && echo YES || echo NO)"

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 : "${VAULT_ADDR:?set VAULT_ADDR, e.g. http://localhost:8200}"

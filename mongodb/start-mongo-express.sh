@@ -7,6 +7,11 @@ echo "  Mongo Express Vault Secret Loader      "
 echo "──────────────────────────────────────"
 
 # ── Debug ──────────────────────────────────────────────
+# ── Vault token: Compose secret file, fallback to env ──
+if [ -s /run/secrets/vault_token ]; then
+  VAULT_TOKEN="$(cat /run/secrets/vault_token)"
+fi
+
 echo "ENV CHECK:"
 echo "  VAULT_ADDR         = ${VAULT_ADDR}"
 echo "  VAULT_TOKEN set    = $([ -n "$VAULT_TOKEN" ] && echo YES || echo NO)"
@@ -89,7 +94,6 @@ MONGO_PASSWORD=$(echo "$RESPONSE" | \
     print $secrets->{MONGO_PASSWORD};
   ')
 
-echo " Mongo Password: $MONGO_PASSWORD"
 export ME_CONFIG_MONGODB_ADMINUSERNAME="$MONGO_USER"
 export ME_CONFIG_MONGODB_ADMINPASSWORD="$MONGO_PASSWORD"
 export ME_CONFIG_MONGODB_URL="mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/"

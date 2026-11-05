@@ -37,3 +37,7 @@ coverage.xml
 # Local runtime data
 logs/
 local_storage/
+vault_server/data/
+
+# Backup copies
+*.backup

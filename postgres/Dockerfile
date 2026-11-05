@@ -1,4 +1,4 @@
-FROM postgres:16
+FROM postgres:16.14
 
 # Install required tools once at build time
 RUN apt-get update && \

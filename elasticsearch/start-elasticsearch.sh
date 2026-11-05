@@ -5,6 +5,11 @@ echo "────────────────────────�
 echo "  Elasticsearch Vault Secret Loader"
 echo "──────────────────────────────────────"
 
+# ── Vault token: Compose secret file, fallback to env ──
+if [ -s /run/secrets/vault_token ]; then
+  VAULT_TOKEN="$(cat /run/secrets/vault_token)"
+fi
+
 [ -z "$VAULT_ADDR" ]        && echo "❌ VAULT_ADDR not set"        && exit 1
 [ -z "$VAULT_TOKEN" ]       && echo "❌ VAULT_TOKEN not set"       && exit 1
 [ -z "$VAULT_SECRET_PATH" ] && echo "❌ VAULT_SECRET_PATH not set" && exit 1

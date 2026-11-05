@@ -5,6 +5,11 @@ echo "────────────────────────�
 echo "  Kibana Vault Secret Loader"
 echo "──────────────────────────────────────"
 
+# ── Vault token: Compose secret file, fallback to env ──
+if [ -s /run/secrets/vault_token ]; then
+  VAULT_TOKEN="$(cat /run/secrets/vault_token)"
+fi
+
 [ -z "$VAULT_ADDR" ]        && echo "❌ VAULT_ADDR not set"        && exit 1
 [ -z "$VAULT_TOKEN" ]       && echo "❌ VAULT_TOKEN not set"       && exit 1
 [ -z "$VAULT_SECRET_PATH" ] && echo "❌ VAULT_SECRET_PATH not set" && exit 1
@@ -37,16 +42,16 @@ KIBANA_ENCRYPTION_KEY=$(echo "$RESPONSE" | \
   grep -o '"KIBANA_ENCRYPTION_KEY":"[^"]*"' | \
   sed 's/"KIBANA_ENCRYPTION_KEY":"//;s/"//')
 
-ELASTIC_PASSWORD=$(echo "$RESPONSE" | \
-  grep -o '"ELASTIC_PASSWORD":"[^"]*"' | \
-  sed 's/"ELASTIC_PASSWORD":"//;s/"//')
+KIBANA_SYSTEM_PASSWORD=$(echo "$RESPONSE" | \
+  grep -o '"KIBANA_SYSTEM_PASSWORD":"[^"]*"' | \
+  sed 's/"KIBANA_SYSTEM_PASSWORD":"//;s/"//')
 
-# ELASTIC_PASSWORD reused for kibana_system as confirmed
+# kibana_system has its own password (set by es-init from the same Vault key)
 export ELASTICSEARCH_USERNAME=kibana_system
-export ELASTICSEARCH_PASSWORD="$ELASTIC_PASSWORD"
+export ELASTICSEARCH_PASSWORD="$KIBANA_SYSTEM_PASSWORD"
 export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="$KIBANA_ENCRYPTION_KEY"
 
-[ -z "$ELASTIC_PASSWORD" ] && echo "❌ ELASTIC_PASSWORD is empty" && exit 1
+[ -z "$KIBANA_SYSTEM_PASSWORD" ] && echo "❌ KIBANA_SYSTEM_PASSWORD is empty" && exit 1
 [ -z "$KIBANA_ENCRYPTION_KEY" ]  && echo "❌ KIBANA_ENCRYPTION_KEY is empty"  && exit 1
 
 echo "✅ Kibana secrets loaded successfully"

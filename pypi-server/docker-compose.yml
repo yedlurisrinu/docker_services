@@ -2,8 +2,13 @@ name: infra
 
 services:
   pypi-server:
-    image: pypiserver/pypiserver:latest
+    image: pypiserver/pypiserver:v2.4.1
     container_name: pypi-server
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "8080:8080"
     command: run -p 8080 -a . -P . --overwrite /data/packages

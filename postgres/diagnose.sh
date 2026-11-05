@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 echo "=== Step 1: All Docker Networks ==="
 docker network ls
 
@@ -21,7 +22,7 @@ for NETWORK in $NETWORKS; do
   echo -n "Testing network '$NETWORK': "
   RESULT=$(docker run --rm \
     --network $NETWORK \
-    alpine \
+    alpine:3.24.2 \
     wget -qO- --timeout=3 \
     http://vault-server:8200/v1/sys/health \
     2>&1)

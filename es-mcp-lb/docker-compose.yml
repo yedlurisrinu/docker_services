@@ -2,11 +2,16 @@ services:
   es-mcp-lb:
     image: nginx:1.30.6-alpine
     container_name: es-mcp-lb
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "9599:9599"
+      - "127.0.0.1:9599:9599"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:9599/lb-healthz"]
       interval: 15s

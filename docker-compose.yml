@@ -1,7 +1,11 @@
+# Convenience entry point for a subset of the stacks. Not everything is here: vault_server and
+# kafka start on their own, keycloak and news-cimd-host must start through their start.sh (they
+# read secrets from Vault on the host), and es-mcp-lb fronts es-mcp-server from its own repo.
+# See README.md (Start order).
 include:
   - mongodb/docker-compose.yml
   - redis/docker-compose.yml
   - qdrant/docker-compose.yml
   - elasticsearch/docker-compose.yml
   - postgres/docker-compose.yml
-  - pypi-server/docker-compose.yml
+#  - pypi-server/docker-compose.yml   # retired (not used by any project); kept for reference

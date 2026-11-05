@@ -12,6 +12,11 @@ echo "────────────────────────�
 #rm -rf /var/lib/apt/lists/*
 #echo "✅ curl installed"
 
+# ── Vault token: Compose secret file, fallback to env ──
+if [ -s /run/secrets/vault_token ]; then
+  VAULT_TOKEN="$(cat /run/secrets/vault_token)"
+fi
+
 # ── Debug ──────────────────────────────────────────────
 echo "ENV CHECK:"
 echo "  VAULT_ADDR         = ${VAULT_ADDR}"
@@ -115,7 +120,17 @@ if [ -z "$POSTGRES_USER" ] || \
    [ -z "$POSTGRES_PASSWORD" ] || \
    [ -z "$POSTGRES_DB" ]; then
   echo "❌ One or more secrets empty"
-  echo "   Raw response: $RESPONSE"
+  # Print key NAMES only — never the values.
+  echo "   Keys present at $VAULT_SECRET_PATH: $(echo "$RESPONSE" | \
+    perl -MJSON -e '
+      local $/;
+      my $data = JSON::decode_json(<STDIN>);
+      my $secrets = exists $data->{data}{data}
+        ? $data->{data}{data}
+        : $data->{data};
+      print join(", ", sort keys %$secrets);
+    ' 2>/dev/null || echo "<unparseable response>")"
+  echo "   Check keys POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB at $VAULT_SECRET_PATH"
   exit 1
 fi
 

@@ -1,0 +1,34 @@
+# Vector: copy every container's stdout/stderr into ~/github/logs/services/<container>/YYYY-MM-DD.log
+# (one file per container per day). The applications already write their own files to ~/github/logs
+# and are excluded here. Files older than LOG_RETENTION_DAYS are deleted by the container's command.
+data_dir: /tmp/vector-data
+
+api:
+  enabled: true
+  address: 127.0.0.1:8686      # healthcheck only; not published
+
+sources:
+  docker:
+    type: docker_logs
+    exclude_containers:
+      - log-collector
+      - news-summary-app
+      - es-mcp-server-r1
+      - es-mcp-server-r2
+      - news_fetch_scheduler
+      - news_consumer_ingester
+
+transforms:
+  lines:
+    type: remap
+    inputs: [docker]
+    source: |
+      .message = format_timestamp!(.timestamp, "%Y-%m-%dT%H:%M:%S%.3fZ") + " " + string!(.stream) + " " + string!(.message)
+
+sinks:
+  files:
+    type: file
+    inputs: [lines]
+    path: "/logs/{{ container_name }}/%Y-%m-%d.log"
+    encoding:
+      codec: text

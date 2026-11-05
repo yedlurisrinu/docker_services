@@ -2,48 +2,62 @@ services:
   elasticsearch:
     image: elasticsearch:9.2.3   # match your local version — see Step 4
     container_name: elasticsearch
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_TOKEN}
-      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+      - VAULT_SECRET_PATH=secret/data/CREDENTIALS
       - discovery.type=single-node
 #      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - xpack.security.enabled=true
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - path.repo=/usr/share/elasticsearch/snapshots
     ports:
-      - "9200:9200"
+      - "127.0.0.1:9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
       - ./start-elasticsearch.sh:/start-elasticsearch.sh
     command: ["bash", "/start-elasticsearch.sh"]
+    secrets:
+      - vault_token
     networks:
       - vault-network
       - services_network
     healthcheck:
-      test: [ "CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'" ]
+      # No credentials: ES answering HTTP (200, or 401 with security on) means it is up.
+      test: [ "CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:9200 | grep -qE '^(200|401)$$'" ]
       interval: 60s
       timeout: 10s
       retries: 10
       start_period: 60s
 
   es-init:
-    image: curlimages/curl:latest       # lightweight curl-only image
+    image: curlimages/curl:8.21.0       # lightweight curl-only image
     container_name: es-init
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: "no"                        # one-shot, never restarts
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_TOKEN}
-      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+      - VAULT_SECRET_PATH=secret/data/CREDENTIALS
+    secrets:
+      - vault_token
+    volumes:
+      - ./es-init.sh:/es-init.sh:ro
     depends_on:
       elasticsearch:
         condition: service_healthy       # waits for ES healthcheck to pass
     networks:
       - vault-network
       - services_network
-    command: >-
-      sh -c 'echo "Setting kibana_system password..." && curl -s -o /dev/null -w "%{http_code}" -X POST "http://elasticsearch:9200/_security/user/kibana_system/_password" -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" -d "{\"password\":\"${ELASTIC_PASSWORD}\"}" | grep -q "200" && echo "kibana_system password set successfully" '
+    command: [ "sh", "/es-init.sh" ]   # reads ELASTIC_PASSWORD / KIBANA_SYSTEM_PASSWORD from Vault at runtime
 
   kibana:
 #      image: kibana:9.2.3   # ← must match ES version exactly
@@ -51,23 +65,40 @@ services:
         context: .
         dockerfile: Dockerfile_kibana
       container_name: kibana
+      logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+        driver: json-file
+        options:
+          max-size: "10m"
+          max-file: "3"
       restart: unless-stopped
       environment:
         - VAULT_ADDR=http://vault-server:8200
-        - VAULT_TOKEN=${VAULT_TOKEN}
-        - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+        - VAULT_SECRET_PATH=secret/data/CREDENTIALS
         - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       ports:
-        - "5601:5601"
+        - "127.0.0.1:5601:5601"
       volumes:
         - ./start-kibana.sh:/start-kibana.sh
       command: [ "bash", "/start-kibana.sh" ]
+      secrets:
+        - vault_token
       depends_on:
         es-init:
           condition: service_completed_successfully
+      healthcheck:
+        test: [ "CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:5601/api/status | grep -q '^200$$'" ]
+        interval: 30s
+        timeout: 10s
+        retries: 10
+        start_period: 120s
       networks:
         - vault-network
         - services_network
+
+secrets:
+  vault_token:
+    # Value taken from VAULT_TOKEN in the environment of the `docker compose` process; not put in the container env.
+    environment: VAULT_TOKEN
 
 volumes:
   es_data:

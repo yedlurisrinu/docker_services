@@ -10,6 +10,12 @@ services:
   news-cimd-host:
     image: nginx:1.30.6-alpine
     container_name: news-cimd-host
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
     secrets:
       - news_cimd_host_tls_key
     volumes:

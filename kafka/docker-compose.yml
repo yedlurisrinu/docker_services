@@ -2,9 +2,14 @@ services:
   kafka:
     image: apache/kafka:4.0.0
     container_name: kafka
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     ports:
-      - "29092:29092"
+      - "127.0.0.1:29092:29092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -18,6 +23,12 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Keep topics, offsets and KRaft metadata on the kafka-data volume. Without this the broker
+      # used its default /tmp/kafka-logs inside the container, so a recreate lost all of it.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # Topics are created explicitly (~/github/kafka_topic_creation.sh: 3 partitions). With
+      # auto-create on, a producer writing to a missing topic would silently create it with 1.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:
@@ -32,9 +43,14 @@ services:
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui:v1.5.0
     container_name: kafka-ui
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     ports:
-      - "8082:8080"
+      - "127.0.0.1:8082:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092

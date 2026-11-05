@@ -29,7 +29,7 @@ fi
 docker run --rm \
   -v "$PWD/certs:/certs" -w /certs \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
-  alpine:3 sh -euc '
+  alpine:3.24.2 sh -euc '
     apk add --no-cache openssl >/dev/null
     # CA: self-signed, marked as a CA, may sign certificates only.
     openssl req -x509 -newkey rsa:3072 -sha256 -days 825 -nodes \

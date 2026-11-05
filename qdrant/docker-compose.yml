@@ -1,11 +1,16 @@
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.18.2
     container_name: qdrant
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     ports:
-      - "6333:6333"   # REST API, http://localhost:6333/dashboard
-      - "6334:6334"   # gRPC,
+      - "127.0.0.1:6333:6333"   # REST API, http://localhost:6333/dashboard
+      - "127.0.0.1:6334:6334"   # gRPC,
     volumes:
       - qdrant_data:/qdrant/storage
     networks:

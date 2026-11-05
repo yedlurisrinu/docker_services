@@ -1,23 +1,29 @@
 services:
   postgres:
-    image: postgres:16
+    image: local/postgres-vault:16.14   # built locally; distinct name so it does not shadow the official postgres tag
     build:
       context: .
       dockerfile: Dockerfile    # ← use custom image
     container_name: postgres
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     environment:
       - VAULT_ADDR=http://vault-server:8200    # ← vault-server DNS confirmed ✅
-      - VAULT_TOKEN=${VAULT_TOKEN}
-      - VAULT_SECRET_PATH=secret/data/DB_SERVICES
+      - VAULT_SECRET_PATH=secret/data/CREDENTIALS
       - PGDATA=/var/lib/postgresql/data/pgdata   # ← must match volume path
       - PGUSER=postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data/pgdata
       - ./start-postgres.sh:/start-postgres.sh
     command: ["bash", "/start-postgres.sh"]
+    secrets:
+      - vault_token         # ← read by start-postgres.sh from /run/secrets/vault_token
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 10s
@@ -27,6 +33,11 @@ services:
     networks:
       - vault-network       # ← join vault-network ✅
       - services_network
+
+secrets:
+  vault_token:
+    # Value taken from VAULT_TOKEN in the environment of the `docker compose` process; not put in the container env.
+    environment: VAULT_TOKEN
 
 volumes:
   postgres-data:

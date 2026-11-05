@@ -7,6 +7,11 @@ echo "  Redis Vault Secret Loader"
 echo "──────────────────────────────────────"
 
 # ── Debug ──────────────────────────────────────────────
+# ── Vault token: Compose secret file, fallback to env ──
+if [ -s /run/secrets/vault_token ]; then
+  VAULT_TOKEN="$(cat /run/secrets/vault_token)"
+fi
+
 echo "ENV CHECK:"
 echo "  VAULT_ADDR         = ${VAULT_ADDR}"
 echo "  VAULT_TOKEN set    = $([ -n "$VAULT_TOKEN" ] && echo YES || echo NO)"
@@ -72,7 +77,7 @@ export REDIS_PASSWORD
 # ── Validate ───────────────────────────────────────────
 if [ -z "$REDIS_PASSWORD" ]; then
   echo "❌ REDIS_PASSWORD is empty"
-  echo "   Raw response: $RESPONSE"
+  echo "   Keys present at $VAULT_SECRET_PATH: $(echo "$RESPONSE" | perl -MJSON -e 'local $/; my $d = JSON::decode_json(<STDIN>); my $s = exists $d->{data}{data} ? $d->{data}{data} : $d->{data}; print join(", ", sort keys %$s)' 2>/dev/null)"
   exit 1
 fi
 

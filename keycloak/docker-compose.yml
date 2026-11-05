@@ -13,6 +13,12 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
     container_name: keycloak
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
     # The image ships bash and Keycloak only (no curl, grep or sed), so the password cannot be fetched from
     # Vault inside the container. Instead, Compose mounts it as a secret file, and this entrypoint reads it with
     # a bash builtin, exports it only into this process, then execs Keycloak.
@@ -35,7 +41,7 @@ services:
       # KC_HOSTNAME: http://localhost:8180 not needed containers can not resolve this, only for lab we used
       KC_HOSTNAME: http://keycloak:8180
       KC_HTTP_PORT: 8180
-      # Lets containers on services_network reach back-channel endpoints (token, JWKS) at keycloak:8080.
+      # Lets containers on services_network reach back-channel endpoints (token, JWKS) at keycloak:8180.
       # Requires KC_HOSTNAME to be a full URL.
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       # Health endpoints on the management port 9000 (/health/ready, /health/live), not published to the host.
@@ -44,7 +50,7 @@ services:
       # verifies. Directories are scanned recursively; PEM files are accepted.
       KC_TRUSTSTORE_PATHS: /opt/keycloak/conf/truststores
     ports:
-      # Host port 8180, because 8080 is already taken by the local pypiserver.
+      # Host port 8180, because 8080 was historically taken by the local pypiserver (now retired).
       - "127.0.0.1:8180:8180"
     volumes:
       # Persists the dev H2 database (realms, clients, users) across restarts; `down -v` resets it.
